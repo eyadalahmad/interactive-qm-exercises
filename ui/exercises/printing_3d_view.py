@@ -1,4 +1,6 @@
 
+from uuid import uuid4
+
 import streamlit as st
 
 from services.attempt_service import AttemptService
@@ -74,6 +76,27 @@ class Printing3DView:
                 self.render_attempt(attempt)
 
     def render_inputs(self, group, exercise):
+        session_id = self.attempt_service.session_service.get_current_session_id()
+        attempt_scope = (group["id"], exercise["id"], session_id)
+        state_key = "printing_submission_state"
+        state = st.session_state.get(state_key)
+
+        if state is None or state["scope"] != attempt_scope:
+            state = {
+                "scope": attempt_scope,
+                "submission_id": str(uuid4()),
+                "awaiting_next": False,
+            }
+            st.session_state[state_key] = state
+
+        if state["awaiting_next"]:
+            st.info("Versuch gespeichert. Starten Sie den nächsten Versuch, um fortzufahren.")
+            if st.button("Nächsten Versuch starten", key="printing_next_attempt"):
+                state["submission_id"] = str(uuid4())
+                state["awaiting_next"] = False
+                st.rerun()
+            return
+
         material = st.selectbox(
             "Druckmaterial",
             options=list(MATERIALS.keys()),
@@ -82,38 +105,40 @@ class Printing3DView:
 
         ranges = MATERIALS[material]
 
-        temperature = st.slider(
-            "Düsentemperatur (°C)",
-            min_value=ranges["temperature"][0],
-            max_value=ranges["temperature"][1],
-            value=ranges["temperature"][2],
-            step=ranges["temperature"][3],
-            key=f"printing_temperature_{material}",
-        )
+        with st.form(key="printing_attempt_form"):
+            temperature = st.slider(
+                "Düsentemperatur (°C)",
+                min_value=ranges["temperature"][0],
+                max_value=ranges["temperature"][1],
+                value=ranges["temperature"][2],
+                step=ranges["temperature"][3],
+                key=f"printing_temperature_{material}",
+            )
 
-        speed = st.slider(
-            "Druckgeschwindigkeit (mm/s)",
-            min_value=ranges["speed"][0],
-            max_value=ranges["speed"][1],
-            value=ranges["speed"][2],
-            step=ranges["speed"][3],
-            key=f"printing_speed_{material}",
-        )
+            speed = st.slider(
+                "Druckgeschwindigkeit (mm/s)",
+                min_value=ranges["speed"][0],
+                max_value=ranges["speed"][1],
+                value=ranges["speed"][2],
+                step=ranges["speed"][3],
+                key=f"printing_speed_{material}",
+            )
 
-        layer_height = st.slider(
-            "Schichthöhe (mm)",
-            min_value=ranges["layer"][0],
-            max_value=ranges["layer"][1],
-            value=ranges["layer"][2],
-            step=ranges["layer"][3],
-            key=f"printing_layer_{material}",
-        )
+            layer_height = st.slider(
+                "Schichthöhe (mm)",
+                min_value=ranges["layer"][0],
+                max_value=ranges["layer"][1],
+                value=ranges["layer"][2],
+                step=ranges["layer"][3],
+                key=f"printing_layer_{material}",
+            )
 
-        if st.button(
-            "Versuch bestätigen",
-            type="primary",
-            key="printing_submit",
-        ):
+            submitted = st.form_submit_button(
+                "Versuch bestätigen",
+                type="primary",
+            )
+
+        if submitted and not state["awaiting_next"]:
             try:
                 settings = PrintingSettings(
                     material=material,
@@ -138,8 +163,10 @@ class Printing3DView:
                     exercise_id=exercise["id"],
                     parameters=parameters,
                     results=result,
+                    submission_id=state["submission_id"],
                 )
-
+                state["awaiting_next"] = True
+                st.rerun()
 
             except Exception as error:
                 st.error(
@@ -179,6 +206,6 @@ class Printing3DView:
 
             st.plotly_chart(
                 figure,
-                use_container_width=True,
+                width="stretch",
                 key=f"printing_figure_{attempt['id']}",
             )

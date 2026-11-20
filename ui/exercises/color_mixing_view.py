@@ -1,4 +1,6 @@
 
+from uuid import uuid4
+
 import streamlit as st
 
 from services.attempt_service import AttemptService
@@ -72,8 +74,7 @@ class ColorMixingView:
         parameters = attempt["parameters"]
         results = attempt["results"]
 
-        with st.container(border=True):
-            st.markdown(f"### Versuch {number}")
+        with st.expander(f"Versuch {number}", expanded=False):
 
             col1, col2 = st.columns(2)
 
@@ -232,88 +233,94 @@ class ColorMixingView:
         )
 
         if is_active and remaining_attempts > 0:
-            st.markdown(
-                f"### Versuch {used_attempts + 1}"
-            )
+            session_id = attempt_service.session_service.get_current_session_id()
+            attempt_scope = (group["id"], exercise["id"], session_id)
+            state_key = "color_submission_state"
+            state = st.session_state.get(state_key)
 
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.markdown("### Farbe 1")
-
-                color1 = st.color_picker(
-                    "Erste Farbe auswählen",
-                    value="#FF0000",
-                    key="mix_color_1"
-                )
-
-                self.show_color_info(color1)
-
-            with col2:
-                st.markdown("### Farbe 2")
-
-                color2 = st.color_picker(
-                    "Zweite Farbe auswählen",
-                    value="#0000FF",
-                    key="mix_color_2"
-                )
-
-                self.show_color_info(color2)
-
-            st.info(
-                "Die Mischfarbe wird erst nach "
-                "Bestätigung des Versuchs angezeigt."
-            )
-
-            if st.button(
-                "Farbauswahl bestätigen",
-                key="confirm_color_attempt",
-                type="primary"
-            ):
-                mixed_color = self.mix_colors(
-                    color1,
-                    color2
-                )
-
-                similarity = self.calculate_similarity(
-                    target_color,
-                    mixed_color
-                )
-
-                parameters = {
-                    "color_1": color1,
-                    "color_2": color2
+            if state is None or state["scope"] != attempt_scope:
+                state = {
+                    "scope": attempt_scope,
+                    "submission_id": str(uuid4()),
+                    "awaiting_next": used_attempts > 0,
                 }
+                st.session_state[state_key] = state
 
-                results = {
-                    "target_color": target_color,
-                    "mixed_color": mixed_color,
-                    "similarity_percent": round(
-                        similarity, 2
+            if state["awaiting_next"]:
+                st.info(
+                    "Versuch gespeichert. Starten Sie den nächsten "
+                    "Versuch, um fortzufahren."
+                )
+                if st.button(
+                    "Nächsten Versuch starten",
+                    key="color_next_attempt"
+                ):
+                    state["submission_id"] = str(uuid4())
+                    state["awaiting_next"] = False
+                    st.rerun()
+            else:
+                st.markdown(f"### Versuch {used_attempts + 1}")
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.markdown("### Farbe 1")
+                    color1 = st.color_picker(
+                        "Erste Farbe auswählen",
+                        value="#FF0000",
+                        key="mix_color_1"
                     )
-                }
+                    self.show_color_info(color1)
 
-                try:
-                    attempt_number = (
-                        attempt_service.save_attempt(
+                with col2:
+                    st.markdown("### Farbe 2")
+                    color2 = st.color_picker(
+                        "Zweite Farbe auswählen",
+                        value="#0000FF",
+                        key="mix_color_2"
+                    )
+                    self.show_color_info(color2)
+
+                st.info(
+                    "Die Mischfarbe wird erst nach "
+                    "Bestätigung des Versuchs angezeigt."
+                )
+
+                if st.button(
+                    "Farbauswahl bestätigen",
+                    key="confirm_color_attempt",
+                    type="primary"
+                ) and not state["awaiting_next"]:
+                    mixed_color = self.mix_colors(color1, color2)
+                    similarity = self.calculate_similarity(
+                        target_color, mixed_color
+                    )
+
+                    parameters = {
+                        "color_1": color1,
+                        "color_2": color2
+                    }
+                    results = {
+                        "target_color": target_color,
+                        "mixed_color": mixed_color,
+                        "similarity_percent": round(similarity, 2)
+                    }
+
+                    try:
+                        attempt_number = attempt_service.save_attempt(
                             group_id=group["id"],
                             exercise_id=exercise["id"],
                             parameters=parameters,
-                            results=results
+                            results=results,
+                            submission_id=state["submission_id"],
                         )
-                    )
-
-                    st.session_state[
-                        "last_color_attempt"
-                    ] = attempt_number
-
-                    st.rerun()
-
-                except Exception:
-                    st.error(
-                        "Der Versuch konnte nicht "
-                        "gespeichert werden."
-                    )
+                        state["awaiting_next"] = True
+                        st.session_state["last_color_attempt"] = attempt_number
+                        st.rerun()
+                    except Exception:
+                        st.error(
+                            "Der Versuch konnte nicht gespeichert werden."
+                        )
 
         elif remaining_attempts == 0:
             st.success(

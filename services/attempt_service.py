@@ -42,7 +42,8 @@ class AttemptService:
         group_id: str,
         exercise_id: str,
         parameters: dict,
-        results: dict
+        results: dict,
+        submission_id: str | None = None,
     ):
         if not isinstance(parameters, dict):
             raise ValueError("Ungültige Versuchsparameter.")
@@ -50,16 +51,18 @@ class AttemptService:
         if not isinstance(results, dict):
             raise ValueError("Ungültige Versuchsergebnisse.")
 
+        payload = {
+            "p_group_id": group_id,
+            "p_exercise_id": exercise_id,
+            "p_parameters": parameters,
+            "p_results": results,
+        }
+
+        if submission_id is not None:
+            payload["p_submission_id"] = submission_id
+
         response = (
-            self.db.rpc(
-                "save_exercise_attempt",
-                {
-                    "p_group_id": group_id,
-                    "p_exercise_id": exercise_id,
-                    "p_parameters": parameters,
-                    "p_results": results
-                }
-            )
+            self.db.rpc("save_exercise_attempt", payload)
             .execute()
         )
 

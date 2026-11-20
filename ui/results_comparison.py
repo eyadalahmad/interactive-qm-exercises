@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 from services.exercise_service import ExerciseService
 from services.results_service import ResultsService
@@ -109,7 +110,7 @@ class ResultsComparison:
                         ),
                     ],
                 )
-                .properties(height=350)
+                .properties(height=350, width="container")
             )
 
             st.altair_chart(
@@ -122,9 +123,13 @@ class ResultsComparison:
         st.markdown("### Rangliste")
         rows = [
             {
-                "Rang": position if item["best"] else "–",
+                "Rang": str(position) if item["best"] else "–",
                 "Gruppe": item["group"]["group_name"],
                 "Versuche": len(item["group"]["attempts"]),
+                "Bester Versuch": (
+                    int(item["best"]["attempt_number"])
+                    if item["best"] else None
+                ),
                 "Bestes Ergebnis": (
                     f"{item['score']:.2f} %"
                     if item["score"] is not None else "–"
@@ -132,7 +137,24 @@ class ResultsComparison:
             }
             for position, item in enumerate(ranking, start=1)
         ]
-        st.dataframe(rows, hide_index=True, use_container_width=True)
+        df = pd.DataFrame(rows)
+
+        df["Bester Versuch"] = pd.to_numeric(
+            df["Bester Versuch"], errors="coerce"
+        )
+
+        styled_df = df.style.format(
+            {
+                "Bester Versuch": "{:.0f}",
+            },
+            na_rep="–",
+        )
+
+        st.dataframe(
+            styled_df,
+            hide_index=True,
+            width="stretch",
+        )
 
         st.markdown("### Details der Versuche")
         group_names = [item["group"]["group_name"] for item in ranking]

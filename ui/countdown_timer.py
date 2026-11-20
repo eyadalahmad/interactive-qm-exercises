@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 
 import streamlit as st
 
-from services.exercise_service import ExerciseService
 
 
 class CountdownTimer:
@@ -33,13 +32,6 @@ class CountdownTimer:
             )
 
             if remaining == 0:
-                try:
-                    ExerciseService().finish_expired_exercises()
-                    st.rerun(scope="app")
-
-                except Exception:
-                    st.error(
-                        "Übungsstatus konnte nicht aktualisiert werden."
-                    )
+                st.info("Die Übungszeit ist abgelaufen.")
 
         countdown()

@@ -47,7 +47,11 @@ class StudentDashboard:
     @st.fragment(run_every="3s")
     def monitor_exercise_status(self, selected_exercise):
         try:
-            exercises = ExerciseService().get_exercises()
+            service = ExerciseService()
+
+            service.finish_expired_exercises()
+
+            exercises = service.get_exercises()
 
             exercise = next(
                 (
