@@ -11,6 +11,14 @@ class ExerciseManagement:
         self.auth = AdminAuth()
         self.service = ExerciseService()
 
+    def update_rgb_help(self):
+        if not self.auth.is_authenticated():
+            return
+
+        self.service.save_rgb_help(
+            st.session_state["admin_rgb_help"]
+        )
+
     def render(self):
         if not self.auth.is_authenticated():
             st.error("Zugriff verweigert.")
@@ -54,6 +62,7 @@ class ExerciseManagement:
 
             try:
                 self.service.reset_exercises()
+                st.session_state.pop("admin_rgb_help", None)
                 st.rerun()
 
             except Exception as error:
@@ -170,4 +179,87 @@ class ExerciseManagement:
                         st.info(
                             "Die Zielfarbe kann während oder nach "
                             "der Übung nicht geändert werden."
+                        )
+
+                    st.divider()
+                    st.write("**RGB-Hilfestellung**")
+
+                    try:
+                        rgb_help = self.service.get_rgb_help()
+
+                        st.session_state["admin_rgb_help"] = rgb_help
+
+                        st.toggle(
+                            "RGB-Hilfestellung anzeigen",
+                            key="admin_rgb_help",
+                            on_change=self.update_rgb_help
+                        )
+
+                    except Exception:
+                        st.error(
+                            "Die RGB-Einstellung konnte nicht "
+                            "geladen oder gespeichert werden."
+                        )
+
+                    st.divider()
+                    st.write("**Rundensteuerung**")
+
+                    try:
+                        current_round = self.service.get_current_round()
+
+                        st.write(f"Aktuelle Runde: {current_round} / 2")
+
+                        if (
+                            current_round == 1
+                            and exercise["status"] == "finished"
+                        ):
+                            if st.button(
+                                "Zweite Runde starten",
+                                key="start_second_color_round",
+                                type="primary"
+                            ):
+                                self.service.start_second_round()
+                                st.session_state.pop("admin_rgb_help", None)
+                                st.rerun()
+
+                        elif current_round == 2:
+                            st.info("Die zweite Runde wurde gestartet.")
+
+                    except Exception as error:
+                        st.error(
+                            "Die Rundensteuerung konnte nicht "
+                            "ausgeführt werden."
+                        )
+                        st.exception(error)
+
+                elif exercise["name"] == "3D-Druckoptimierung":
+                    st.divider()
+                    st.write("**Rundensteuerung**")
+
+                    try:
+                        current_round = (
+                            self.service.get_printing_current_round()
+                        )
+
+                        st.write(f"Aktuelle Runde: {current_round} / 2")
+
+                        if (
+                            current_round == 1
+                            and exercise["status"] == "finished"
+                        ):
+                            if st.button(
+                                "Zweite Runde starten",
+                                key="start_second_printing_round",
+                                type="primary"
+                            ):
+                                self.service.start_second_printing_round()
+                                st.rerun()
+
+                        elif current_round == 2:
+                            st.info("Die zweite Runde wurde gestartet.")
+
+                    except Exception:
+                        st.error(
+                            "Die Rundensteuerung konnte nicht "
+                            "ausgeführt werden."
                         )

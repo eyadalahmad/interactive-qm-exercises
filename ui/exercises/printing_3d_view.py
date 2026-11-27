@@ -4,6 +4,7 @@ from uuid import uuid4
 import streamlit as st
 
 from services.attempt_service import AttemptService
+from services.exercise_service import ExerciseService
 from services.printing_simulation_service import (
     MATERIALS,
     PrintingSettings,
@@ -16,6 +17,7 @@ class Printing3DView:
     def __init__(self):
         self.attempt_service = AttemptService()
         self.visualizer = Printing3DVisualizer()
+        self.exercise_service = ExerciseService()
 
     def render(self, exercise):
         st.subheader("3D-Druckoptimierung")
@@ -50,12 +52,21 @@ class Printing3DView:
             return
 
         try:
-            attempts = self.attempt_service.get_attempts(
-                group["id"], exercise["id"]
+            current_round = (
+                self.exercise_service.get_printing_current_round()
             )
+
+            attempts = self.attempt_service.get_attempts(
+                group["id"],
+                exercise["id"],
+                current_round
+            )
+
         except Exception:
             st.error("Versuche konnten nicht geladen werden.")
             return
+
+        st.markdown(f"## Runde {current_round} / 2")
 
         remaining = max(
             0, self.attempt_service.MAX_ATTEMPTS - len(attempts)
@@ -66,7 +77,7 @@ class Printing3DView:
         )
 
         if status == "active" and remaining > 0:
-            self.render_inputs(group, exercise)
+            self.render_inputs(group, exercise, current_round)
 
         if attempts:
             st.divider()
@@ -75,9 +86,9 @@ class Printing3DView:
             for attempt in attempts:
                 self.render_attempt(attempt)
 
-    def render_inputs(self, group, exercise):
+    def render_inputs(self, group, exercise, current_round):
         session_id = self.attempt_service.session_service.get_current_session_id()
-        attempt_scope = (group["id"], exercise["id"], session_id)
+        attempt_scope = (group["id"], exercise["id"], session_id, current_round)
         state_key = "printing_submission_state"
         state = st.session_state.get(state_key)
 
@@ -164,6 +175,7 @@ class Printing3DView:
                     parameters=parameters,
                     results=result,
                     submission_id=state["submission_id"],
+                    round_number=current_round,
                 )
                 state["awaiting_next"] = True
                 st.rerun()

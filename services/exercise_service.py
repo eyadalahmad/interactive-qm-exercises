@@ -148,3 +148,76 @@ class ExerciseService:
             },
             on_conflict="key"
         ).execute()
+
+    def get_rgb_help(self):
+        response = (
+            self.db.table("settings")
+            .select("value")
+            .eq("key", "show_rgb_help")
+            .limit(1)
+            .execute()
+        )
+
+        if not response.data:
+            return False
+
+        return response.data[0]["value"] == "true"
+
+    def save_rgb_help(self, enabled: bool):
+        self.db.table("settings").upsert(
+            {
+                "key": "show_rgb_help",
+                "value": "true" if enabled else "false"
+            },
+            on_conflict="key"
+        ).execute()
+
+    def get_current_round(self):
+        response = (
+            self.db.table("settings")
+            .select("value")
+            .eq("key", "color_current_round")
+            .limit(1)
+            .execute()
+        )
+
+        if not response.data:
+            return 1
+
+        return int(response.data[0]["value"])
+
+    def start_second_round(self):
+        from services.admin_auth import AdminAuth
+
+        if not AdminAuth().is_authenticated():
+            raise PermissionError("Zugriff verweigert.")
+
+        self.db.rpc(
+            "start_second_color_round", {}
+        ).execute()
+
+
+    def get_printing_current_round(self):
+        response = (
+            self.db.table("settings")
+            .select("value")
+            .eq("key", "printing_current_round")
+            .limit(1)
+            .execute()
+        )
+
+        if not response.data:
+            return 1
+
+        return int(response.data[0]["value"])
+
+    def start_second_printing_round(self):
+        from services.admin_auth import AdminAuth
+
+        if not AdminAuth().is_authenticated():
+            raise PermissionError("Zugriff verweigert.")
+
+        self.db.rpc(
+            "start_second_printing_round",
+            {}
+        ).execute()

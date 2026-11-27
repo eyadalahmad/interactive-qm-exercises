@@ -3,4 +3,3 @@ supabase
 plotly
 pandas
 numpy
-altair

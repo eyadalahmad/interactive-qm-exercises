@@ -1,4 +1,3 @@
-
 from uuid import uuid4
 
 import streamlit as st
@@ -44,6 +43,22 @@ class ColorMixingView:
             (1 - distance / (3 * 255 ** 2) ** 0.5) * 100
         )
 
+    def show_color_preview(self, color: str):
+        safe_color = self.rgb_to_hex(self.hex_to_rgb(color))
+
+        st.markdown(
+            f"""
+            <div style="
+                background-color: {safe_color};
+                height: 45px;
+                width: 40px;
+                border-radius: 6px;
+                border: 1px solid #808080;
+            "></div>
+            """,
+            unsafe_allow_html=True
+        )
+
     def show_color_info(self, color: str):
         rgb = self.hex_to_rgb(color)
 
@@ -69,7 +84,7 @@ class ColorMixingView:
                 f"{rgb[2] / 255 * 100:.1f}%"
             )
 
-    def show_attempt_result(self, attempt):
+    def show_attempt_result(self, attempt, rgb_help=False):
         number = attempt["attempt_number"]
         parameters = attempt["parameters"]
         results = attempt["results"]
@@ -81,12 +96,7 @@ class ColorMixingView:
             with col1:
                 st.write("**Farbe 1**")
 
-                st.color_picker(
-                    "Gespeicherte Farbe 1",
-                    value=parameters["color_1"],
-                    disabled=True,
-                    key=f"saved_color_1_{attempt['id']}"
-                )
+                self.show_color_preview(results["target_color"])
 
             with col2:
                 st.write("**Farbe 2**")
@@ -125,10 +135,8 @@ class ColorMixingView:
                     key=f"target_{attempt['id']}"
                 )
 
-                st.code(
-                    results["target_color"],
-                    language=None
-                )
+                if rgb_help:
+                    self.show_color_info(results["target_color"])
 
             with col_mixed:
                 st.write("**Mischfarbe**")
@@ -191,10 +199,13 @@ class ColorMixingView:
 
         try:
             attempt_service = AttemptService()
+            exercise_service = ExerciseService()
+            current_round = exercise_service.get_current_round()
 
             attempts = attempt_service.get_attempts(
                 group["id"],
-                exercise["id"]
+                exercise["id"],
+                current_round
             )
 
         except Exception:
@@ -211,20 +222,19 @@ class ColorMixingView:
         )
 
         try:
-            target_color = ExerciseService().get_target_color()
+            target_color = exercise_service.get_target_color()
+            rgb_help = exercise_service.get_rgb_help()
         except Exception:
-            st.error("Die Zielfarbe konnte nicht geladen werden.")
+            st.error("Die Farbeinstellungen konnten nicht geladen werden.")
             return
 
+        st.markdown(f"## Runde {current_round} / 2")
         st.markdown("### Zielfarbe")
 
-        st.color_picker(
-            "Zielfarbe",
-            value=target_color,
-            disabled=True,
-            key="target_color"
-        )
+        self.show_color_preview(target_color)
 
+        if rgb_help:
+            self.show_color_info(target_color)
         st.divider()
 
         st.write(
@@ -234,11 +244,12 @@ class ColorMixingView:
 
         if is_active and remaining_attempts > 0:
             session_id = attempt_service.session_service.get_current_session_id()
-            attempt_scope = (group["id"], exercise["id"], session_id)
+            attempt_scope = (group["id"], exercise["id"], session_id, current_round)
             state_key = "color_submission_state"
             state = st.session_state.get(state_key)
 
             if state is None or state["scope"] != attempt_scope:
+                st.session_state.pop("last_color_attempt", None)
                 state = {
                     "scope": attempt_scope,
                     "submission_id": str(uuid4()),
@@ -313,6 +324,7 @@ class ColorMixingView:
                             parameters=parameters,
                             results=results,
                             submission_id=state["submission_id"],
+                            round_number=current_round,
                         )
                         state["awaiting_next"] = True
                         st.session_state["last_color_attempt"] = attempt_number
@@ -347,4 +359,4 @@ class ColorMixingView:
             st.markdown("## Gespeicherte Versuche")
 
             for attempt in attempts:
-                self.show_attempt_result(attempt)
+                self.show_attempt_result(attempt, rgb_help)

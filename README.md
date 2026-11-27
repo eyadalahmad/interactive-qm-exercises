@@ -7,19 +7,19 @@ Eine webbasierte Anwendung für interaktive Gruppenübungen im Qualitätsmanagem
 - **Farbmischung:** Zwei Farben auswählen und die Übereinstimmung der Mischfarbe mit einer Zielfarbe bewerten.
 - **3D-Druckoptimierung:** Druckmaterial, Düsentemperatur, Druckgeschwindigkeit und Schichthöhe einstellen. Die Anwendung berechnet einen vereinfachten Qualitätswert, Warping, Layer Shifting und Schichtanzahl und visualisiert den Würfel in 3D.
 
-Pro Gruppe sind **drei Versuche je Übung und Sitzung** möglich.
+Jede Übung besteht aus zwei Runden mit jeweils 10 Minuten. Pro Gruppe sind **drei Versuche je Runde** möglich. Bei der Farbmischung werden in der zweiten Runde zusätzlich die RGB-Werte der Zielfarbe angezeigt.
 
 ## Funktionen
 
 - Anmeldung der Studierendengruppen mit individuellem Gruppencode
 - Administrationsbereich zur Gruppen- und Übungsverwaltung
-- Zeitbegrenzte Übungen und Vorbereitung neuer Sitzungen
-- Vergleich der Gruppenergebnisse mit Rangliste, Diagramm und Versuchdetails
+- Steuerung beider Runden und Vorbereitung neuer Sitzungen
+- Vergleich der besten Gruppenergebnisse beider Runden mit Diagrammen, Differenzen in Prozentpunkten und Versuchsdetails
 - Speicherung der Ergebnisse in Supabase; frühere Sitzungen bleiben erhalten
 
 ## Technologien
 
-Python, Streamlit, Supabase, Plotly, Altair, Pandas und NumPy.
+Python, Streamlit, Supabase, Plotly,  Pandas und NumPy.
 
 ## Lokaler Start
 
@@ -34,7 +34,9 @@ Für die Verbindung mit Supabase werden die benötigten Zugangsdaten lokal in `.
 
 ## Bereitstellung
 
-Die Veröffentlichung über GitHub und Streamlit Community Cloud ist vorgesehen. Nach dem Deployment sollen Studierende die Anwendung über einen Link bzw. QR-Code auf ihren eigenen Geräten öffnen können.
+Die Anwendung wird über GitHub und Streamlit Community Cloud bereitgestellt. Studierende können sie über einen Link bzw. QR-Code auf ihren eigenen Geräten öffnen.
+
+[Anwendung öffnen](https://interactive-qm-exercises.streamlit.app/)
 
 ## Hinweis
 

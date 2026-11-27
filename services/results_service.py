@@ -21,11 +21,12 @@ class ResultsService:
         response = (
             self.db.table("attempts")
             .select(
-                "id, group_id, attempt_number, "
+                "id, group_id, attempt_number, round_number, "
                 "parameters, results, created_at"
             )
             .eq("exercise_id", exercise_id)
             .eq("session_id", session_id)
+            .order("round_number")
             .order("attempt_number")
             .execute()
         )

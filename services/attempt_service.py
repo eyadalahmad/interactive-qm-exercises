@@ -10,7 +10,7 @@ class AttemptService:
         self.db = SupabaseClient().client
         self.session_service = SessionService()
 
-    def get_attempts(self, group_id: str, exercise_id: str):
+    def get_attempts(self, group_id: str, exercise_id: str, round_number: int = 1):
         session_id = self.session_service.get_current_session_id()
 
         if not session_id:
@@ -25,6 +25,7 @@ class AttemptService:
             .eq("group_id", group_id)
             .eq("exercise_id", exercise_id)
             .eq("session_id", session_id)
+            .eq("round_number", round_number)
             .order("attempt_number")
             .execute()
         )
@@ -32,9 +33,9 @@ class AttemptService:
         return response.data
 
     def get_remaining_attempts(
-        self, group_id: str, exercise_id: str
+        self, group_id: str, exercise_id: str, round_number: int = 1
     ):
-        attempts = self.get_attempts(group_id, exercise_id)
+        attempts = self.get_attempts(group_id, exercise_id, round_number)
         return max(0, self.MAX_ATTEMPTS - len(attempts))
 
     def save_attempt(
@@ -44,6 +45,7 @@ class AttemptService:
         parameters: dict,
         results: dict,
         submission_id: str | None = None,
+        round_number: int = 1,
     ):
         if not isinstance(parameters, dict):
             raise ValueError("Ungültige Versuchsparameter.")
@@ -60,6 +62,9 @@ class AttemptService:
 
         if submission_id is not None:
             payload["p_submission_id"] = submission_id
+            payload["p_round_number"] = round_number
+        elif round_number != 1:
+            raise ValueError("Submission-ID fehlt.")
 
         response = (
             self.db.rpc("save_exercise_attempt", payload)
