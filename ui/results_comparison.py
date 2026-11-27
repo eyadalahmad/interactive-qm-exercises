@@ -302,7 +302,7 @@ class ResultsComparison:
             hide_index=True,
             width="stretch"
         )
-    @st.fragment
+    @st.fragment(run_every=3)
     def render(self):
         st.subheader("Ergebnisse der Gruppen")
 
