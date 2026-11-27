@@ -96,7 +96,7 @@ class ColorMixingView:
             with col1:
                 st.write("**Farbe 1**")
 
-                self.show_color_preview(results["target_color"])
+                self.show_color_preview(parameters["color_1"])
 
             with col2:
                 st.write("**Farbe 2**")
@@ -268,6 +268,7 @@ class ColorMixingView:
                 ):
                     state["submission_id"] = str(uuid4())
                     state["awaiting_next"] = False
+                    st.session_state.pop("last_color_attempt", None)
                     st.rerun()
             else:
                 st.markdown(f"### Versuch {used_attempts + 1}")
@@ -279,7 +280,7 @@ class ColorMixingView:
                     color1 = st.color_picker(
                         "Erste Farbe auswählen",
                         value="#FF0000",
-                        key="mix_color_1"
+                        key=f"mix_color_1_{state['submission_id']}"
                     )
                     self.show_color_info(color1)
 
@@ -288,7 +289,7 @@ class ColorMixingView:
                     color2 = st.color_picker(
                         "Zweite Farbe auswählen",
                         value="#0000FF",
-                        key="mix_color_2"
+                        key=f"mix_color_2_{state['submission_id']}"
                     )
                     self.show_color_info(color2)
 
